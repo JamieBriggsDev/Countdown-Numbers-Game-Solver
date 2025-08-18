@@ -1,17 +1,35 @@
+use std::fmt;
 use std::io;
+use std::time::Instant;
+
 struct Add;
 struct Subtract;
 struct BitShiftLeft;
 struct BitShiftRight;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CalcError {
+    NegativeShift,
+    ShiftOutOfRange,
+}
+
+impl fmt::Display for CalcError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CalcError::NegativeShift => write!(f, "shift count must be non-negative"),
+            CalcError::ShiftOutOfRange => write!(f, "shift count out of range for i64"),
+        }
+    }
+}
+
 trait Calculation {
-    fn process(&self, x: i64, y: i64) -> i64;
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError>;
     fn symbol(&self) -> &str;
 }
 
 impl Calculation for Add {
-    fn process(&self, x: i64, y: i64) -> i64 {
-        x + y
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        Ok(x + y)
     }
     fn symbol(&self) -> &str {
         "+"
@@ -19,8 +37,8 @@ impl Calculation for Add {
 }
 
 impl Calculation for Subtract {
-    fn process(&self, x: i64, y: i64) -> i64 {
-        x - y
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        Ok(x - y)
     }
 
     fn symbol(&self) -> &str {
@@ -29,13 +47,9 @@ impl Calculation for Subtract {
 }
 
 impl Calculation for BitShiftLeft {
-    fn process(&self, x: i64, y: i64) -> i64 {
-        // Convert to u32 and check bounds; perform a checked shift.
-        let shift: u32 = match y.try_into() {
-            Ok(s) => s,
-            Err(_) => return 0, // negative shift count
-        };
-        x.checked_shl(shift).unwrap_or(0) // or: unwrap_or(x), or pick a policy
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        let shift: u32 = y.try_into().map_err(|_| CalcError::NegativeShift)?;
+        x.checked_shl(shift).ok_or(CalcError::ShiftOutOfRange)
     }
 
     fn symbol(&self) -> &str {
@@ -44,14 +58,9 @@ impl Calculation for BitShiftLeft {
 }
 
 impl Calculation for BitShiftRight {
-    fn process(&self, x: i64, y: i64) -> i64 {
-        // Convert to u32 and check bounds; perform a checked shift.
-        let shift: u32 = match y.try_into() {
-            Ok(s) => s,
-            Err(_) => return 0, // Negative shift count, return 0
-        };
-        x.checked_shr(shift).unwrap_or(0)
-
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        let shift: u32 = y.try_into().map_err(|_| CalcError::NegativeShift)?;
+        x.checked_shr(shift).ok_or(CalcError::ShiftOutOfRange)
     }
 
     fn symbol(&self) -> &str {
@@ -62,15 +71,19 @@ impl Calculation for BitShiftRight {
 fn main() {
     println!("Cast does Countdown application!");
 
+    let numbers = get_input_numbers();
+    println!("Using numbers: {:?}", numbers);
+
+    // Start counting time after getting numbers, the user takes a few seconds to input numbers
+    //  which would lead to an unrealistic stopwatch timer.
+    let start = Instant::now();
+
     let mut operations: Vec<Box<dyn Calculation>> = Vec::new();
 
     operations.push(Box::new(Add));
     operations.push(Box::new(Subtract));
     operations.push(Box::new(BitShiftLeft));
     operations.push(Box::new(BitShiftRight));
-
-    let numbers = get_input_numbers();
-    println!("Using numbers: {:?}", numbers);
 
     // Go through every type of equation that could be called
     let mut count: i64 = 0;
@@ -85,17 +98,27 @@ fn main() {
                 break 'inner;
             }
             'operation: for opp in &operations {
-                count = count + 1;
-                println!(
-                    "Performing: {x} {:?} {y} = {:?}",
-                    opp.symbol(),
-                    opp.process(x, y)
-                );
+                match opp.process(x, y) {
+                    Ok(result) =>{
+                        count = count + 1;
+                        println!(
+                            "Performing: {x} {} {y} = {:?}",
+                            opp.symbol(),
+                            result
+                        );
+                    }
+                    Err(_e) => {
+                        continue 'operation;
+                    }
+                }
             }
         }
     }
 
-    println!("You found {count} combinations!")
+    println!("You found {count} combinations!");
+
+    let elapsed = start.elapsed();
+    println!("Completed in {:?}ms", elapsed.as_millis());
 }
 
 #[cfg(not(debug_assertions))]
