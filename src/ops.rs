@@ -3,6 +3,8 @@ use std::fmt;
 
 pub struct Add;
 pub struct Subtract;
+pub struct Multiply;
+pub struct Divide;
 pub struct BitShiftLeft;
 pub struct BitShiftRight;
 
@@ -10,6 +12,7 @@ pub struct BitShiftRight;
 pub enum CalcError {
     NegativeShift,
     ShiftOutOfRange,
+    DivideByZero,
 }
 
 impl fmt::Display for CalcError {
@@ -17,6 +20,7 @@ impl fmt::Display for CalcError {
         match self {
             CalcError::NegativeShift => write!(f, "shift count must be non-negative"),
             CalcError::ShiftOutOfRange => write!(f, "shift count out of range for i64"),
+            CalcError::DivideByZero => write!(f, "division by zero"),
         }
     }
 }
@@ -42,6 +46,29 @@ impl Calculation for Subtract {
 
     fn symbol(&self) -> &str {
         "-"
+    }
+}
+
+impl Calculation for Multiply {
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        Ok(x * y)
+    }
+
+    fn symbol(&self) -> &str {
+        "x"
+    }
+}
+
+impl Calculation for Divide {
+    fn process(&self, x: i64, y: i64) -> Result<i64, CalcError> {
+        if y == 0 {
+            return Err(CalcError::DivideByZero);
+        }
+        Ok(x / y)
+    }
+
+    fn symbol(&self) -> &str {
+        "/"
     }
 }
 
@@ -73,5 +100,14 @@ pub fn default_operations() -> Vec<Box<dyn Calculation>> {
         Box::new(Subtract),
         Box::new(BitShiftLeft),
         Box::new(BitShiftRight),
+    ]
+}
+
+pub fn classic_operations() -> Vec<Box<dyn Calculation>> {
+    vec![
+        Box::new(Add),
+        Box::new(Subtract),
+        Box::new(Multiply),
+        Box::new(Divide),
     ]
 }

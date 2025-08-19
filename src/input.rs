@@ -34,3 +34,23 @@ pub fn get_input_numbers() -> Vec<i64> {
     numbers.push(4);
     numbers
 }
+
+#[cfg(not(debug_assertions))]
+pub fn get_target_number() -> i64 {
+    // Input the target number
+    println!("Please enter a target number");
+    let mut input_line = String::new();
+    io::stdin()
+        .read_line(&mut input_line)
+        .expect("Failed to read line");
+
+    input_line
+        .trim()
+        .parse()
+        .expect("Please enter a valid integer")
+}
+
+#[cfg(debug_assertions)]
+pub fn get_target_number() -> i64 {
+    437
+}

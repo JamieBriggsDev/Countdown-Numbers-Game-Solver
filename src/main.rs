@@ -10,13 +10,14 @@ fn main() {
     let numbers = input::get_input_numbers();
     println!("Using numbers: {:?}", numbers);
 
+    let target = input::get_target_number();
+
     // Start counting time after getting numbers, the user takes a few seconds to input numbers
     //  which would lead to an unrealistic stopwatch timer.
     let start = Instant::now();
 
-    let operations = ops::default_operations();
-    
-    solution::run(&numbers, &operations);
+
+    solution::run(&numbers,target);
     
 
     let elapsed = start.elapsed();
